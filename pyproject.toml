@@ -1,0 +1,39 @@
+[project]
+name = "pytest-pydantic-evals"
+version = "0.1.0"
+description = "pytest plugin integrating pydantic-evals"
+readme = "README.md"
+authors = [
+    { name = "Alex Ward", email = "alxwrd@googlemail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pytest>=8.0",
+    "pydantic-evals>=1.67",
+]
+
+[project.optional-dependencies]
+logfire = ["logfire"]
+
+[project.entry-points."pytest11"]
+pytest_pydantic_evals = "pytest_pydantic_evals.plugin"
+
+[build-system]
+requires = ["uv_build>=0.10.0,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "poethepoet>=0.42.1",
+    "ruff>=0.15.5",
+    "ty>=0.0.21",
+]
+
+[tool.poe.tasks]
+_format = "ruff format"
+_sort = "ruff check --select I --fix"
+format = ["_format", "_sort"]
+lint = "ruff check"
+check = "ty check"
+test = "pytest"
+all = ["format", "lint", "check", "test"]
