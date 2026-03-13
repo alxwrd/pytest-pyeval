@@ -1,5 +1,5 @@
 [project]
-name = "pytest-pydantic-evals"
+name = "pytest-pyeval"
 version = "0.1.0"
 description = "pytest plugin integrating pydantic-evals"
 readme = "README.md"
@@ -16,11 +16,14 @@ dependencies = [
 logfire = ["logfire"]
 
 [project.entry-points."pytest11"]
-pytest_pydantic_evals = "pytest_pydantic_evals.plugin"
+pytest_pyeval = "pyeval.plugin"
 
 [build-system]
 requires = ["uv_build>=0.10.0,<0.11.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pyeval"
 
 [dependency-groups]
 dev = [

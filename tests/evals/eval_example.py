@@ -1,7 +1,7 @@
 """Example eval file — used both as a standalone example and in plugin tests."""
 
-from pytest_pydantic_evals import Case, dataset, execute
-from pytest_pydantic_evals.evaluators import (
+from pyeval import Case, dataset, execute
+from pyeval.evaluators import (
     Contains,
     EqualsExpected,
     Evaluator,
