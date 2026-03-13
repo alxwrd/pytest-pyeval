@@ -15,8 +15,10 @@ from ._core import (
     _group_by_type,
 )
 
-# Maps nodeid → (score_symbol, icons_string), populated during runtest()
-_eval_status: dict[str, tuple[str, str]] = {}
+# Maps nodeid → (score_symbol, score_color, icons_string), populated during runtest()
+_eval_status: dict[str, tuple[str, str, str]] = {}
+
+_RESET = "\033[0m"
 
 _SCORE_BANDS: list[tuple[float, str, str]] = [
     (0.9, "●", "\033[92m"),  # bright green
@@ -44,9 +46,9 @@ def pytest_report_teststatus(report, config):
     status = _eval_status.get(report.nodeid)
     if status is None:
         return None
-    symbol, color = status
-    reset = "\033[0m"
-    return ("passed", f"{color}{symbol}{reset}", f"{color}{symbol}{reset}")
+    symbol, color, icons = status
+    short = f"{color}{symbol}{_RESET}"
+    return ("evaluated", short, icons)
 
 
 def pytest_pycollect_makeitem(collector, name: str, obj: object):
@@ -157,13 +159,21 @@ class EvalItem(pytest.Item):
             inputs=self.case.inputs,
             metadata=self.case.metadata,
             expected_output=self.case.expected_output,
-            output=execution_result.ctx.output if execution_result is not None else None,
-            metrics=execution_result.ctx.metrics if execution_result is not None else {},
-            attributes=execution_result.ctx.attributes if execution_result is not None else {},
+            output=execution_result.ctx.output
+            if execution_result is not None
+            else None,
+            metrics=execution_result.ctx.metrics
+            if execution_result is not None
+            else {},
+            attributes=execution_result.ctx.attributes
+            if execution_result is not None
+            else {},
             assertions=assertions,
             scores=scores,
             labels=labels,
-            task_duration=execution_result.ctx.duration if execution_result is not None else 0.0,
+            task_duration=execution_result.ctx.duration
+            if execution_result is not None
+            else 0.0,
             total_duration=total_duration,
             evaluator_failures=evaluator_failures,
         )
@@ -174,7 +184,9 @@ class EvalItem(pytest.Item):
             if bool_results
             else 1.0
         )
-        _eval_status[self.nodeid] = _score_symbol(score)
+        icons = "".join("✔" if r.value is True else "✗" for r in bool_results)
+        symbol, color = _score_symbol(score)
+        _eval_status[self.nodeid] = (symbol, color, icons)
 
     def reportinfo(self):
         return self.fspath, None, f"{self.parent.name}:{self.name}"
