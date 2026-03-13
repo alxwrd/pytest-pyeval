@@ -1,14 +1,18 @@
 """Example eval file — used both as a standalone example and in plugin tests."""
 
-from pytest_pydantic_eval import (
-    dataset,
-    execute,
-    Case,
-    EqualsExpected,
+from pytest_pydantic_evals import Case, dataset, execute
+from pytest_pydantic_evals.evaluators import (
     Contains,
+    EqualsExpected,
+    Evaluator,
     IsInstance,
     MaxDuration,
 )
+
+
+class CustomEvaluator(Evaluator):
+    def evaluate(self, ctx) -> float:
+        return 0.5
 
 
 @dataset(
@@ -67,6 +71,33 @@ def eval_title_case_validation(case):
     result.evaluate(EqualsExpected())
     result.evaluate(Contains(value="H", evaluation_name="has_capitals"))
     result.evaluate(MaxDuration(seconds=0.001))
+
+
+@dataset(
+    Case(
+        name="uppercase_basic",
+        inputs="hello world",
+        expected_output="HELLO WORLD",
+    ),
+    Case(
+        name="uppercase_with_numbers",
+        inputs="hello 123",
+        expected_output="HELLO 123",
+    ),
+    Case(
+        name="uppercase_bye",
+        inputs="bye 123",
+        expected_output="BYE 123",
+    ),
+)
+def eval_uppercase(case):
+    def uppercase_text(text: str) -> str:
+        return text.upper()
+
+    result = execute(uppercase_text, case)
+
+    result.evaluate(EqualsExpected())
+    result.evaluate(Contains(value="HELLO", case_sensitive=True))
 
 
 # $ uv run pytest tests/evals/eval_example.py

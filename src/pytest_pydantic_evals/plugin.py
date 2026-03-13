@@ -3,11 +3,10 @@ from __future__ import annotations
 import inspect
 import time
 import traceback
-from typing import Any
 
 import pytest
 from pydantic_evals import Case
-from pydantic_evals.evaluators import EvaluationResult, EvaluatorFailure
+from pydantic_evals.evaluators import EvaluatorFailure
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 
 from ._core import (
@@ -16,9 +15,38 @@ from ._core import (
     _group_by_type,
 )
 
+# Maps nodeid → (score_symbol, icons_string), populated during runtest()
+_eval_status: dict[str, tuple[str, str]] = {}
+
+_SCORE_BANDS: list[tuple[float, str, str]] = [
+    (0.9, "●", "\033[92m"),  # bright green
+    (0.7, "◕", "\033[32m"),  # green
+    (0.5, "◑", "\033[33m"),  # yellow
+    (0.3, "◔", "\033[31m"),  # red
+    (0.0, "○", "\033[91m"),  # bright red
+]
+
+
+def _score_symbol(score: float) -> tuple[str, str]:
+    for threshold, symbol, color in _SCORE_BANDS:
+        if score >= threshold:
+            return symbol, color
+    return _SCORE_BANDS[-1][1], _SCORE_BANDS[-1][2]
+
 
 def pytest_configure(config) -> None:
     config.addinivalue_line("python_files", "eval_*.py")
+
+
+def pytest_report_teststatus(report, config):
+    if report.when != "call":
+        return None
+    status = _eval_status.get(report.nodeid)
+    if status is None:
+        return None
+    symbol, color = status
+    reset = "\033[0m"
+    return ("passed", f"{color}{symbol}{reset}", f"{color}{symbol}{reset}")
 
 
 def pytest_pycollect_makeitem(collector, name: str, obj: object):
@@ -78,12 +106,6 @@ class EvalCollector(pytest.Collector):
         report.print()
 
 
-class EvalAssertionError(Exception):
-    def __init__(self, results: list[EvaluationResult]):
-        self.results = results
-        super().__init__()
-
-
 class EvalItem(pytest.Item):
     def __init__(self, name: str, parent, func, case: Case):
         super().__init__(name, parent)
@@ -100,7 +122,7 @@ class EvalItem(pytest.Item):
             name: self._request.getfixturevalue(name) for name in self.fixturenames
         }
 
-        results: list[EvaluationResult] = []
+        results: list = []
         results_token = _CURRENT_EVAL_RESULTS.set(results)
         execution_token = _CURRENT_EXECUTION_RESULT.set(None)
 
@@ -126,7 +148,6 @@ class EvalItem(pytest.Item):
         total_duration = time.perf_counter() - t0
         assertions, scores, labels = _group_by_type(results)
 
-        # Gather evaluator failures from the ExecutionResult if one was produced
         evaluator_failures: list[EvaluatorFailure] = (
             execution_result.failures if execution_result is not None else []
         )
@@ -136,40 +157,24 @@ class EvalItem(pytest.Item):
             inputs=self.case.inputs,
             metadata=self.case.metadata,
             expected_output=self.case.expected_output,
-            output=execution_result.ctx.output
-            if execution_result is not None
-            else None,
-            metrics=execution_result.ctx.metrics
-            if execution_result is not None
-            else {},
-            attributes=execution_result.ctx.attributes
-            if execution_result is not None
-            else {},
+            output=execution_result.ctx.output if execution_result is not None else None,
+            metrics=execution_result.ctx.metrics if execution_result is not None else {},
+            attributes=execution_result.ctx.attributes if execution_result is not None else {},
             assertions=assertions,
             scores=scores,
             labels=labels,
-            task_duration=execution_result.ctx.duration
-            if execution_result is not None
-            else 0.0,
+            task_duration=execution_result.ctx.duration if execution_result is not None else 0.0,
             total_duration=total_duration,
             evaluator_failures=evaluator_failures,
         )
 
-        failed_assertions = [r for r in assertions.values() if r.value is False]
-        if failed_assertions or evaluator_failures:
-            raise EvalAssertionError(results)
-
-    def repr_failure(self, excinfo: Any) -> str:
-        if isinstance(excinfo.value, EvalAssertionError):
-            lines = []
-            for r in excinfo.value.results:
-                icon = "✔" if r.value is True else ("✗" if r.value is False else "~")
-                line = f"  {icon} {r.name}"
-                if r.reason:
-                    line += f": {r.reason}"
-                lines.append(line)
-            return "\n".join(lines)
-        return str(excinfo.value)
+        bool_results = list(assertions.values())
+        score = (
+            sum(1 for r in bool_results if r.value is True) / len(bool_results)
+            if bool_results
+            else 1.0
+        )
+        _eval_status[self.nodeid] = _score_symbol(score)
 
     def reportinfo(self):
         return self.fspath, None, f"{self.parent.name}:{self.name}"

@@ -18,7 +18,6 @@ from pydantic_evals.evaluators import (
     EvaluatorOutput,
 )
 from pydantic_evals.otel._errors import SpanTreeRecordingError
-from pydantic_evals.reporting import ReportCase
 
 _EVALUATOR_OUTPUT_ADAPTER: TypeAdapter[EvaluatorOutput] = TypeAdapter(EvaluatorOutput)
 
