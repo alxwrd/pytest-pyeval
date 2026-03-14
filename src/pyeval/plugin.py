@@ -15,9 +15,6 @@ from ._core import (
     _group_by_type,
 )
 
-# Maps nodeid → (score_symbol, score_color, icons_string), populated during runtest()
-_eval_status: dict[str, tuple[str, str, str]] = {}
-
 _RESET = "\033[0m"
 
 _SCORE_BANDS: list[tuple[float, str, str]] = [
@@ -33,7 +30,7 @@ def _score_symbol(score: float) -> tuple[str, str]:
     for threshold, symbol, color in _SCORE_BANDS:
         if score >= threshold:
             return symbol, color
-    return _SCORE_BANDS[-1][1], _SCORE_BANDS[-1][2]
+    raise ValueError(f"Score {score!r} did not match any band (expected a value >= 0.0)")
 
 
 def pytest_configure(config) -> None:
@@ -43,12 +40,11 @@ def pytest_configure(config) -> None:
 def pytest_report_teststatus(report, config):
     if report.when != "call":
         return None
-    status = _eval_status.get(report.nodeid)
-    if status is None:
-        return None
-    symbol, color, icons = status
-    short = f"{color}{symbol}{_RESET}"
-    return ("evaluated", short, icons)
+    for key, value in report.user_properties:
+        if key == "eval_status":
+            symbol, color, icons = value
+            return ("evaluated", f"{color}{symbol}{_RESET}", icons)
+    return None
 
 
 def pytest_pycollect_makeitem(collector, name: str, obj: object):
@@ -92,9 +88,9 @@ class EvalCollector(pytest.Collector):
         for item in self.session.items:
             if item.parent is not self:
                 continue
-            if hasattr(item, "_report_case") and item._report_case is not None:
+            if item._report_case is not None:
                 report_cases.append(item._report_case)
-            elif hasattr(item, "_report_failure") and item._report_failure is not None:
+            elif item._report_failure is not None:
                 report_failures.append(item._report_failure)
 
         if not report_cases and not report_failures:
@@ -150,6 +146,7 @@ class EvalItem(pytest.Item):
         total_duration = time.perf_counter() - t0
         assertions, scores, labels = _group_by_type(results)
 
+        ctx = execution_result.ctx if execution_result is not None else None
         evaluator_failures: list[EvaluatorFailure] = (
             execution_result.failures if execution_result is not None else []
         )
@@ -159,21 +156,13 @@ class EvalItem(pytest.Item):
             inputs=self.case.inputs,
             metadata=self.case.metadata,
             expected_output=self.case.expected_output,
-            output=execution_result.ctx.output
-            if execution_result is not None
-            else None,
-            metrics=execution_result.ctx.metrics
-            if execution_result is not None
-            else {},
-            attributes=execution_result.ctx.attributes
-            if execution_result is not None
-            else {},
+            output=ctx.output if ctx else None,
+            metrics=ctx.metrics if ctx else {},
+            attributes=ctx.attributes if ctx else {},
             assertions=assertions,
             scores=scores,
             labels=labels,
-            task_duration=execution_result.ctx.duration
-            if execution_result is not None
-            else 0.0,
+            task_duration=ctx.duration if ctx else 0.0,
             total_duration=total_duration,
             evaluator_failures=evaluator_failures,
         )
@@ -186,7 +175,7 @@ class EvalItem(pytest.Item):
         )
         icons = "".join("✔" if r.value is True else "✗" for r in bool_results)
         symbol, color = _score_symbol(score)
-        _eval_status[self.nodeid] = (symbol, color, icons)
+        self.user_properties.append(("eval_status", (symbol, color, icons)))
 
     def reportinfo(self):
         return self.fspath, None, f"{self.parent.name}:{self.name}"
