@@ -53,8 +53,14 @@ class ExecutionResult:
                 else {default_name: normalized}
             )
             for name, result in mapping.items():
+                if not isinstance(name, str):
+                    name = str(name)
                 if not isinstance(result, EvaluationReason):
-                    result = EvaluationReason(value=result)
+                    result = EvaluationReason(
+                        value=result
+                        if isinstance(result, bool | int | float | str)
+                        else str(result)
+                    )
                 results.append(
                     EvaluationResult(
                         name=name,
@@ -153,7 +159,7 @@ def dataset(*cases: Case) -> Callable[[Func], Func]:
     """
 
     def decorator(fn: Func) -> Func:
-        fn.__eval_cases__ = cases  # type: ignore[attr-defined]
+        fn.__eval_cases__ = cases
         return fn
 
     return decorator

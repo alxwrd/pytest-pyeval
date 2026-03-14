@@ -90,7 +90,7 @@ def eval_title_case_validation(case):
         expected_output="BYE 123",
     ),
 )
-def eval_uppercase(case):
+def eval_uppercase(case: Case, request):
     def uppercase_text(text: str) -> str:
         return text.upper()
 

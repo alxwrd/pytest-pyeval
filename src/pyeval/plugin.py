@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import inspect
 import time
 import traceback
 from collections.abc import Callable
 from typing import Any, cast
 
 import pytest
+from _pytest.fixtures import TopRequest
 from _pytest.nodes import Node
+from _pytest.python import Function
 from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluatorFailure
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
@@ -118,6 +119,8 @@ class EvalCollector(pytest.Collector):
 
 
 class EvalItem(pytest.Item):
+    _request: pytest.FixtureRequest
+
     def __init__(self, name: str, parent: Node, func: Callable[..., Any], case: Case):
         super().__init__(name, parent)
         self.func = func
@@ -125,15 +128,19 @@ class EvalItem(pytest.Item):
         self._report_case: ReportCase | None = None
         self._report_failure: ReportCaseFailure | None = None
 
-        self.fixturenames = [
-            parameter
-            for parameter in inspect.signature(func).parameters
-            if parameter != "case"
-        ]
+        self._fixtureinfo = self.session._fixturemanager.getfixtureinfo(
+            node=self,
+            func=func,
+            cls=None,
+        )
+
+        self._request = TopRequest(cast(Function, self), _ispytest=True)
 
     def runtest(self):
         fixtures = {
-            name: self._request.getfixturevalue(name) for name in self.fixturenames
+            name: self._request.getfixturevalue(name)
+            for name in self._fixtureinfo.names_closure
+            if name != "case"
         }
 
         results: list = []
