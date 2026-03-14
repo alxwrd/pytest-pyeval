@@ -20,7 +20,6 @@ from pydantic_evals.evaluators import (
 from pydantic_evals.otel._errors import SpanTreeRecordingError
 
 _EVALUATOR_OUTPUT_ADAPTER: TypeAdapter[EvaluatorOutput] = TypeAdapter(EvaluatorOutput)
-_F = TypeVar("_F", bound=Callable[..., Any])
 
 _CURRENT_EVAL_RESULTS: ContextVar[list[EvaluationResult] | None] = ContextVar(
     "current_eval_results", default=None
@@ -48,7 +47,11 @@ class ExecutionResult:
             raw = evaluator.evaluate_sync(self.ctx)
             normalized = _EVALUATOR_OUTPUT_ADAPTER.validate_python(raw)
             default_name = evaluator.get_default_evaluation_name()
-            mapping = normalized if isinstance(normalized, Mapping) else {default_name: normalized}
+            mapping = (
+                normalized
+                if isinstance(normalized, Mapping)
+                else {default_name: normalized}
+            )
             for name, result in mapping.items():
                 if not isinstance(result, EvaluationReason):
                     result = EvaluationReason(value=result)
@@ -74,18 +77,18 @@ class ExecutionResult:
 def _group_by_type(
     evaluation_results: list[EvaluationResult],
 ) -> tuple[
-    dict[str, EvaluationResult],
-    dict[str, EvaluationResult],
-    dict[str, EvaluationResult],
+    dict[str, EvaluationResult[bool]],
+    dict[str, EvaluationResult[int | float]],
+    dict[str, EvaluationResult[str]],
 ]:
     """Split evaluation results into assertions (bool), scores (int/float), labels (str)."""
-    assertions: dict[str, EvaluationResult] = {}
-    scores: dict[str, EvaluationResult] = {}
-    labels: dict[str, EvaluationResult] = {}
+    assertions: dict[str, EvaluationResult[bool]] = {}
+    scores: dict[str, EvaluationResult[int | float]] = {}
+    labels: dict[str, EvaluationResult[str]] = {}
     seen: set[str] = set()
 
-    for er in evaluation_results:
-        name = er.name
+    for result in evaluation_results:
+        name = result.name
         if name in seen:
             suffix = 2
             while f"{name}_{suffix}" in seen:
@@ -93,11 +96,11 @@ def _group_by_type(
             name = f"{name}_{suffix}"
         seen.add(name)
 
-        if (a := er.downcast(bool)) is not None:
-            assertions[name] = a
-        elif (s := er.downcast(int, float)) is not None:
-            scores[name] = s
-        elif (label := er.downcast(str)) is not None:
+        if (assertion := result.downcast(bool)) is not None:
+            assertions[name] = assertion
+        elif (score := result.downcast(int, float)) is not None:
+            scores[name] = score
+        elif (label := result.downcast(str)) is not None:
             labels[name] = label
 
     return assertions, scores, labels
@@ -126,7 +129,10 @@ def execute(task: Callable[..., Any], case: Case) -> ExecutionResult:
     return result
 
 
-def dataset(*cases: Case) -> Callable[[_F], _F]:
+Func = TypeVar("Func", bound=Callable[..., Any])
+
+
+def dataset(*cases: Case) -> Callable[[Func], Func]:
     """Register evaluation cases for an eval function.
 
     Attaches the provided :class:`~pydantic_evals.Case` instances to the decorated
@@ -146,7 +152,7 @@ def dataset(*cases: Case) -> Callable[[_F], _F]:
             result.evaluate(EqualsExpected())
     """
 
-    def decorator(fn: _F) -> _F:
+    def decorator(fn: Func) -> Func:
         fn.__eval_cases__ = cases  # type: ignore[attr-defined]
         return fn
 

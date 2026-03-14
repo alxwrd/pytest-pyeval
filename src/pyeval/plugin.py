@@ -3,8 +3,11 @@ from __future__ import annotations
 import inspect
 import time
 import traceback
+from collections.abc import Callable
+from typing import Any, cast
 
 import pytest
+from _pytest.nodes import Node
 from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluatorFailure
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
@@ -30,14 +33,18 @@ def _score_symbol(score: float) -> tuple[str, str]:
     for threshold, symbol, color in _SCORE_BANDS:
         if score >= threshold:
             return symbol, color
-    raise ValueError(f"Score {score!r} did not match any band (expected a value >= 0.0)")
+    raise ValueError(
+        f"Score {score!r} did not match any band (expected a value >= 0.0)"
+    )
 
 
 def pytest_configure(config) -> None:
     config.addinivalue_line("python_files", "eval_*.py")
 
 
-def pytest_report_teststatus(report, config):
+def pytest_report_teststatus(
+    report: pytest.TestReport, config: pytest.Config
+) -> tuple[str, str, str] | None:
     if report.when != "call":
         return None
     for key, value in report.user_properties:
@@ -48,6 +55,7 @@ def pytest_report_teststatus(report, config):
 
 
 def pytest_pycollect_makeitem(collector, name: str, obj: object):
+    """Collect eval functions and return EvalCollector instances."""
     if not (callable(obj) and name.startswith("eval_")):
         return None
 
@@ -78,20 +86,25 @@ class EvalCollector(pytest.Collector):
 
     def collect(self):
         for i, case in enumerate(self.cases, 1):
-            item_name = case.name or f"case_{i}"
-            yield EvalItem.from_parent(self, name=item_name, func=self.func, case=case)
+            yield EvalItem.from_parent(
+                self,
+                name=case.name or f"case_{i}",
+                func=self.func,
+                case=case,
+            )
 
     def teardown(self):
         report_cases: list[ReportCase] = []
         report_failures: list[ReportCaseFailure] = []
 
-        for item in self.session.items:
+        for item in cast(list[EvalItem], self.session.items):
             if item.parent is not self:
                 continue
-            if item._report_case is not None:
-                report_cases.append(item._report_case)
-            elif item._report_failure is not None:
-                report_failures.append(item._report_failure)
+
+            if report_case := item._report_case:
+                report_cases.append(report_case)
+            elif report_failure := item._report_failure:
+                report_failures.append(report_failure)
 
         if not report_cases and not report_failures:
             return
@@ -105,15 +118,18 @@ class EvalCollector(pytest.Collector):
 
 
 class EvalItem(pytest.Item):
-    def __init__(self, name: str, parent, func, case: Case):
+    def __init__(self, name: str, parent: Node, func: Callable[..., Any], case: Case):
         super().__init__(name, parent)
         self.func = func
         self.case = case
         self._report_case: ReportCase | None = None
         self._report_failure: ReportCaseFailure | None = None
 
-        sig = inspect.signature(func)
-        self.fixturenames = [p for p in sig.parameters if p != "case"]
+        self.fixturenames = [
+            parameter
+            for parameter in inspect.signature(func).parameters
+            if parameter != "case"
+        ]
 
     def runtest(self):
         fixtures = {
@@ -178,4 +194,6 @@ class EvalItem(pytest.Item):
         self.user_properties.append(("eval_status", (symbol, color, icons)))
 
     def reportinfo(self):
-        return self.fspath, None, f"{self.parent.name}:{self.name}"
+        parent_name = f"{self.parent.name}:" if self.parent is not None else ""
+
+        return self.fspath, None, f"{parent_name}{self.name}"
