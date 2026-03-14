@@ -1,11 +1,29 @@
 [project]
 name = "pytest-pyeval"
 version = "0.2.0"
+license = "MIT"
 description = "pytest plugin integrating pydantic-evals"
 readme = "README.md"
 authors = [
     { name = "Alex Ward", email = "alxwrd@googlemail.com" }
 ]
+keywords = [ "evals", "pytest", "pydantic" ]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Testing",
+  "Topic :: Software Development :: Libraries",
+]
+
 requires-python = ">=3.10"
 dependencies = [
     "pytest>=8.0",
@@ -14,6 +32,10 @@ dependencies = [
 
 [project.optional-dependencies]
 logfire = ["logfire"]
+
+[project.urls]
+Repository = "https://github.com/alxwrd/pytest-pyeval"
+Releases = "https://github.com/alxwrd/pytest-pyeval/releases"
 
 [project.entry-points."pytest11"]
 pytest_pyeval = "pyeval.plugin"

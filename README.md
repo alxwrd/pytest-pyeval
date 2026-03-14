@@ -3,7 +3,12 @@
     <p align="center"><i>
         A <code>pytest</code> plugin integrating <code>pydantic-evals</code>
     </i></p>
-    <img width="256px" src=".github/assets/wizard-768.png">
+    <img width="256px" src="https://raw.githubusercontent.com/alxwrd/pytest-pyeval/refs/heads/main/.github/assets/wizard-768.png">
+    <div align="center">
+        <a href="https://github.com/alxwrd/pytest-pyeval/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/alxwrd/pytest-pyeval/test.yml?branch=main&label=main"></a>
+        <a href="https://pypi.python.org/pypi/pytest-pyeval"><img src="https://img.shields.io/pypi/v/pytest-pyeval.svg"></a>
+        <a href="https://github.com/alxwrd/pytest-pyeval/blob/main/LICENCE"><img src="https://img.shields.io/pypi/l/pytest-pyeval.svg"></a>
+    </div>
 
 Run [evals](https://ai.pydantic.dev/evals/) via
 [pytest](https://docs.pytest.org/en/stable/) with the power of fixtures and
