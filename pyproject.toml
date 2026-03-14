@@ -40,3 +40,6 @@ lint = "ruff check"
 check = "ty check"
 test = "pytest"
 all = ["format", "lint", "check", "test"]
+_check-format = "ruff format --check"
+_check-sort = "ruff check --select I"
+ci = ["_check-format", "_check-sort", "lint", "check", "test"]
