@@ -119,8 +119,6 @@ class EvalCollector(pytest.Collector):
 
 
 class EvalItem(pytest.Item):
-    _request: pytest.FixtureRequest
-
     def __init__(self, name: str, parent: Node, func: Callable[..., Any], case: Case):
         super().__init__(name, parent)
         self.func = func
@@ -134,14 +132,16 @@ class EvalItem(pytest.Item):
             cls=None,
         )
 
+        self.funcargs: dict[str, object] = {}
+        self.fixturenames = self._fixtureinfo.names_closure
         self._request = TopRequest(cast(Function, self), _ispytest=True)
 
+    def setup(self):
+        self.funcargs["case"] = self.case
+        self._request._fillfixtures()
+
     def runtest(self):
-        fixtures = {
-            name: self._request.getfixturevalue(name)
-            for name in self._fixtureinfo.names_closure
-            if name != "case"
-        }
+        kwargs = {name: self.funcargs[name] for name in self._fixtureinfo.argnames}
 
         results: list = []
         results_token = _CURRENT_EVAL_RESULTS.set(results)
@@ -149,7 +149,7 @@ class EvalItem(pytest.Item):
 
         t0 = time.perf_counter()
         try:
-            self.func(case=self.case, **fixtures)
+            self.func(**kwargs)
         except Exception as exc:
             self._report_failure = ReportCaseFailure(
                 name=self.name,
