@@ -207,8 +207,7 @@ class EvalItem(pytest.Item):
             else 1.0
         )
         icons = "".join("✔" if r.value is True else "✗" for r in bool_results)
-        symbol, color = _score_symbol(score)
-        self.user_properties.append(("eval_status", (symbol, color, icons)))
+        self.user_properties.append(("eval_status", (*_score_symbol(score), icons)))
 
     def reportinfo(self):
         parent_name = f"{self.parent.name}:" if self.parent is not None else ""
