@@ -1,6 +1,6 @@
 [project]
 name = "pytest-pyeval"
-version = "0.2.0"
+version = "0.3.0"
 license = "MIT"
 description = "pytest plugin integrating pydantic-evals"
 readme = "README.md"
