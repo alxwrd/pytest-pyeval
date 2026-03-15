@@ -123,7 +123,7 @@ class EvalItem(pytest.Item):
 
     def __init__(self, name: str, parent: Node, func: Callable[..., Any], case: Case):
         super().__init__(name, parent)
-        self.func = func
+        self.obj = func
         self.case = case
         self._report_case: ReportCase | None = None
         self._report_failure: ReportCaseFailure | None = None
@@ -135,6 +135,16 @@ class EvalItem(pytest.Item):
         )
 
         self._request = TopRequest(cast(Function, self), _ispytest=True)
+
+    @property
+    def func(self) -> Callable[..., Any]:
+        """Alias for :attr:`obj` using the domain name ``func``.
+
+        pytest uses ``obj`` as the conventional attribute name for the underlying
+        Python object a node wraps. We store the eval function there to satisfy
+        that convention, and expose it here as ``func`` for readability.
+        """
+        return self.obj
 
     def runtest(self):
         fixtures = {
