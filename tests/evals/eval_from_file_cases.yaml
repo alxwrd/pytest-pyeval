@@ -1,0 +1,7 @@
+cases:
+  - name: uppercase_basic
+    inputs: hello world
+    expected_output: HELLO WORLD
+  - name: uppercase_with_numbers
+    inputs: hello 123
+    expected_output: HELLO 123

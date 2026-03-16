@@ -5,10 +5,11 @@ import traceback
 from collections.abc import Callable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, TypeVar
 
 from pydantic import TypeAdapter
-from pydantic_evals import Case
+from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import (
     EvaluationReason,
     EvaluationResult,
@@ -138,16 +139,20 @@ def execute(task: Callable[..., Any], case: Case) -> ExecutionResult:
 Func = TypeVar("Func", bound=Callable[..., Any])
 
 
-def dataset(*cases: Case) -> Callable[[Func], Func]:
+def dataset(*args: Case | str | Path) -> Callable[[Func], Func]:
     """Register evaluation cases for an eval function.
 
-    Attaches the provided :class:`~pydantic_evals.Case` instances to the decorated
-    function so that pytest-pyeval can discover and run each case as a separate test item.
+    Accepts either a file path (str or :class:`~pathlib.Path`) to load cases from,
+    or one or more :class:`~pydantic_evals.Case` instances directly.
+
+    When given a file path, the dataset is loaded via
+    :meth:`~pydantic_evals.Dataset.from_file`, which supports YAML and JSON formats.
 
     Args:
-        *cases: One or more :class:`~pydantic_evals.Case` instances to run against the function.
+        *args: Either a single file path (str or Path) or one or more
+            :class:`~pydantic_evals.Case` instances.
 
-    Example::
+    Example — inline cases::
 
         @dataset(
             Case(name="basic", inputs="hello", expected_output="HELLO"),
@@ -156,7 +161,18 @@ def dataset(*cases: Case) -> Callable[[Func], Func]:
         def eval_uppercase(case: Case) -> None:
             result = execute(str.upper, case)
             result.evaluate(EqualsExpected())
+
+    Example — from file::
+
+        @dataset("cases.yaml")
+        def eval_uppercase(case: Case) -> None:
+            result = execute(str.upper, case)
+            result.evaluate(EqualsExpected())
     """
+    if len(args) == 1 and isinstance(args[0], (str, Path)):
+        cases: tuple[Case, ...] = tuple(Dataset.from_file(args[0]).cases)
+    else:
+        cases = args  # type: ignore[assignment]
 
     def decorator(fn: Func) -> Func:
         fn.__eval_cases__ = cases
