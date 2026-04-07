@@ -19,7 +19,7 @@ using a familiar Arrange, Act, Evaluate pattern.
 ## Example
 
 ```python
-from pyeval import dataset, Case, EqualsExpected, Contains
+from pyeval import dataset, execute, Case, EqualsExpected, Contains
 
 
 def uppercase_text(text: str) -> str:

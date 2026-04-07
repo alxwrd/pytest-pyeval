@@ -34,23 +34,39 @@ _CURRENT_EXECUTION_RESULT: ContextVar[ExecutionResult | None] = ContextVar(
 
 @dataclass
 class ExecutionResult:
+    """The result of running a task via :func:`execute`.
+
+    Provides direct access to the task's output and the case inputs for use
+    in assertions or additional evaluations::
+
+        result = execute(my_func, case)
+
+        assert "expected substring" in result.output
+
+        result.evaluate(EqualsExpected())
+    """
+
     ctx: EvaluatorContext
     failures: list[EvaluatorFailure] = field(default_factory=list)
 
     @property
     def output(self) -> Any:
+        """The value returned by the task function."""
         return self.ctx.output
 
     @property
     def inputs(self) -> Any:
+        """The inputs passed to the task function, taken from the case."""
         return self.ctx.inputs
 
     @property
     def expected_output(self) -> Any:
+        """The expected output from the case, or ``None`` if not set."""
         return self.ctx.expected_output
 
     @property
     def duration(self) -> float:
+        """How long the task took to run, in seconds."""
         return self.ctx.duration
 
     def evaluate(self, evaluator: Evaluator) -> None:
