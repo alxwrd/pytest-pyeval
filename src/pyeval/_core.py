@@ -37,6 +37,22 @@ class ExecutionResult:
     ctx: EvaluatorContext
     failures: list[EvaluatorFailure] = field(default_factory=list)
 
+    @property
+    def output(self) -> Any:
+        return self.ctx.output
+
+    @property
+    def inputs(self) -> Any:
+        return self.ctx.inputs
+
+    @property
+    def expected_output(self) -> Any:
+        return self.ctx.expected_output
+
+    @property
+    def duration(self) -> float:
+        return self.ctx.duration
+
     def evaluate(self, evaluator: Evaluator) -> None:
         results = _CURRENT_EVAL_RESULTS.get()
         if results is None:
