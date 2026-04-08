@@ -202,7 +202,7 @@ def dataset(*args: Case | str | Path) -> Callable[[Func], Func]:
             result.evaluate(EqualsExpected())
     """
     if len(args) == 1 and isinstance(args[0], (str, Path)):
-        cases: tuple[Case, ...] = tuple(Dataset.from_file(args[0]).cases)
+        cases: tuple[Case, ...] = tuple(Dataset[Any, Any, Any].from_file(args[0]).cases)
     else:
         cases = args  # type: ignore[assignment]
 
