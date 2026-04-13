@@ -46,7 +46,7 @@ def eval_uppercase(case: Case):
 ```
 
 ```plain
-$ uv run pytest
+$ uv run pyeval
 
 ============================== test session starts ==============================
 platform darwin -- Python 3.13.1, pytest-9.0.2, pluggy-1.6.0
@@ -63,4 +63,22 @@ tests/evals/eval_example.py ●●                                              
 
 ```shell
 uv add --dev pytest-pyeval
+```
+
+## Running evals
+
+`pytest-pyeval` keeps evals separate from your regular test suite. Evals are
+excluded from `pytest` by default, since they are typically slower, hit live
+APIs, and run on a different cadence to unit tests.
+
+| Command | What runs |
+|---|---|
+| `pytest` | Regular tests only (`test_*.py`) |
+| `pytest --evals` | Eval tests only (`eval_*.py`) |
+| `pyeval` | Shorthand for `pytest --evals` |
+
+```shell
+pyeval                     # discover and run all evals in the project
+pyeval evals/              # run evals under a specific path
+pyeval evals/eval_foo.py   # run a single eval file
 ```
