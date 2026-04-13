@@ -235,4 +235,6 @@ class EvalItem(pytest.Item):
     def reportinfo(self):
         parent_name = f"{self.parent.name}:" if self.parent is not None else ""
 
-        return self.fspath, None, f"{parent_name}{self.name}"
+        # 0 is the pytest convention for synthetic items with no source line —
+        # see https://docs.pytest.org/en/stable/example/nonpython.html
+        return self.fspath, 0, f"{parent_name}{self.name}"
