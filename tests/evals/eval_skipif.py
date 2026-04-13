@@ -4,7 +4,10 @@ import pytest
 
 from pyeval import Case, dataset, execute
 
-pytestmark = pytest.mark.skipif(True, reason="always skipped — tests that EvalItem handles pytestmark skipif without INTERNALERROR")
+pytestmark = pytest.mark.skipif(
+    True,
+    reason="always skipped — tests that EvalItem handles pytestmark skipif without INTERNALERROR",
+)
 
 
 @dataset(
