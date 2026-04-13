@@ -14,4 +14,4 @@ pytestmark = pytest.mark.skipif(
     Case(name="skipped_case", inputs="hello", expected_output="hello"),
 )
 def eval_skipif_regression(case):
-    result = execute(lambda x: x, case)
+    execute(lambda x: x, case)
