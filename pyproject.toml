@@ -37,6 +37,9 @@ logfire = ["logfire"]
 Repository = "https://github.com/alxwrd/pytest-pyeval"
 Releases = "https://github.com/alxwrd/pytest-pyeval/releases"
 
+[project.scripts]
+pyeval = "pyeval.cli:main"
+
 [project.entry-points."pytest11"]
 pytest_pyeval = "pyeval.plugin"
 
