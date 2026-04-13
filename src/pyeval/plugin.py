@@ -39,8 +39,31 @@ def _score_symbol(score: float) -> tuple[str, str]:
     )
 
 
+def pytest_addoption(parser) -> None:
+    parser.addoption(
+        "--evals",
+        action="store_true",
+        default=False,
+        help="Run only eval tests (@dataset-decorated functions in eval_*.py files).",
+    )
+
+
 def pytest_configure(config) -> None:
     config.addinivalue_line("python_files", "eval_*.py")
+
+
+def pytest_ignore_collect(collection_path, config) -> bool | None:
+    if not collection_path.is_file() or collection_path.suffix != ".py":
+        return None
+
+    is_eval_file = collection_path.name.startswith("eval_")
+    run_evals = config.getoption("--evals", default=False)
+
+    if run_evals and not is_eval_file:
+        return True
+    if not run_evals and is_eval_file:
+        return True
+    return None
 
 
 def pytest_report_teststatus(
