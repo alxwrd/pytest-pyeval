@@ -69,48 +69,49 @@ class ExecutionResult:
         """How long the task took to run, in seconds."""
         return self.ctx.duration
 
-    def evaluate(self, evaluator: Evaluator) -> None:
+    def evaluate(self, *evaluators: Evaluator) -> None:
         results = _CURRENT_EVAL_RESULTS.get()
         if results is None:
             raise RuntimeError(
                 "result.evaluate() called outside of an eval context. "
                 "Did you call this eval function directly instead of running it via pytest?"
             )
-        try:
-            raw = evaluator.evaluate_sync(self.ctx)
-            normalized = _EVALUATOR_OUTPUT_ADAPTER.validate_python(raw)
-            default_name = evaluator.get_default_evaluation_name()
-            mapping = (
-                normalized
-                if isinstance(normalized, Mapping)
-                else {default_name: normalized}
-            )
-            for name, result in mapping.items():
-                if not isinstance(name, str):
-                    name = str(name)
-                if not isinstance(result, EvaluationReason):
-                    result = EvaluationReason(
-                        value=result
-                        if isinstance(result, bool | int | float | str)
-                        else str(result)
+        for evaluator in evaluators:
+            try:
+                raw = evaluator.evaluate_sync(self.ctx)
+                normalized = _EVALUATOR_OUTPUT_ADAPTER.validate_python(raw)
+                default_name = evaluator.get_default_evaluation_name()
+                mapping = (
+                    normalized
+                    if isinstance(normalized, Mapping)
+                    else {default_name: normalized}
+                )
+                for name, result in mapping.items():
+                    if not isinstance(name, str):
+                        name = str(name)
+                    if not isinstance(result, EvaluationReason):
+                        result = EvaluationReason(
+                            value=result
+                            if isinstance(result, bool | int | float | str)
+                            else str(result)
+                        )
+                    results.append(
+                        EvaluationResult(
+                            name=name,
+                            value=result.value,
+                            reason=result.reason,
+                            source=evaluator.as_spec(),
+                        )
                     )
-                results.append(
-                    EvaluationResult(
-                        name=name,
-                        value=result.value,
-                        reason=result.reason,
+            except Exception as e:
+                self.failures.append(
+                    EvaluatorFailure(
+                        name=evaluator.get_default_evaluation_name(),
+                        error_message=f"{type(e).__name__}: {e}",
+                        error_stacktrace=traceback.format_exc(),
                         source=evaluator.as_spec(),
                     )
                 )
-        except Exception as e:
-            self.failures.append(
-                EvaluatorFailure(
-                    name=evaluator.get_default_evaluation_name(),
-                    error_message=f"{type(e).__name__}: {e}",
-                    error_stacktrace=traceback.format_exc(),
-                    source=evaluator.as_spec(),
-                )
-            )
 
 
 def _group_by_type(
