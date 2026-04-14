@@ -10,7 +10,7 @@ from pyeval.evaluators import EqualsExpected, IsInstance, MaxDuration
         name="with_extra_evaluators",
         inputs="hello",
         expected_output="hello",
-        evaluators=[MaxDuration(seconds=1)],
+        evaluators=(MaxDuration(seconds=1),),
     ),
 )
 def eval_case_evaluators(case: Case):
