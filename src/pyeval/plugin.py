@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import time
 import traceback
 from collections.abc import Callable
@@ -223,13 +224,20 @@ class EvalItem(pytest.Item):
             evaluator_failures=evaluator_failures,
         )
 
-        bool_results = list(assertions.values())
-        score = (
-            sum(1 for r in bool_results if r.value is True) / len(bool_results)
-            if bool_results
-            else 1.0
+        all_values = [
+            min(1.0, max(0.0, float(r.value)))
+            for r in itertools.chain(assertions.values(), scores.values())
+        ]
+        score = sum(all_values) / len(all_values) if all_values else 1.0
+
+        bool_icons = "".join(
+            "✔" if r.value is True else "✗" for r in assertions.values()
         )
-        icons = "".join("✔" if r.value is True else "✗" for r in bool_results)
+        score_icons = "".join(
+            _score_symbol(min(1.0, max(0.0, float(result.value))))[0]
+            for result in scores.values()
+        )
+        icons = bool_icons + score_icons
         self.user_properties.append(("eval_status", (*_score_symbol(score), icons)))
 
     def reportinfo(self):
