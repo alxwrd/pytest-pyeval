@@ -14,6 +14,8 @@ from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluatorFailure
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 
+from pyeval._logfire import send_report
+
 from ._core import (
     _CURRENT_EVAL_RESULTS,
     _CURRENT_EXECUTION_RESULT,
@@ -140,6 +142,8 @@ class EvalCollector(pytest.Collector):
             failures=report_failures,
         )
         report.print()
+
+        send_report(report)
 
 
 class EvalItem(pytest.Item):
