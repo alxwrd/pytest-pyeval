@@ -14,7 +14,6 @@ from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluatorFailure
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 
-
 from pyeval._logfire import send_report
 
 from ._core import (
