@@ -82,3 +82,33 @@ pyeval                     # discover and run all evals in the project
 pyeval evals/              # run evals under a specific path
 pyeval evals/eval_foo.py   # run a single eval file
 ```
+
+## Logfire integration
+
+`pytest-pyeval` automatically sends evaluation results to [Logfire](https://logfire.pydantic.dev/)
+as experiment traces when Logfire is configured.
+
+Configure Logfire before your evals run using a session-scoped autouse fixture
+in your `conftest.py`:
+
+```python
+# tests/evals/conftest.py
+import logfire
+import pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_logfire():
+    logfire.configure(
+        send_to_logfire="if-token-present",
+    )
+```
+
+That's it! With `LOGFIRE_TOKEN` set in your environment, evaluation traces will
+appear in the Logfire web UI under the **Evals** view.
+
+To install Logfire:
+
+```shell
+uv add --dev logfire
+```
