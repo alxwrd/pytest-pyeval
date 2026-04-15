@@ -71,6 +71,7 @@ def eval_title_case_validation(case):
     result.evaluate(EqualsExpected())
     result.evaluate(Contains(value="H", evaluation_name="has_capitals"))
     result.evaluate(MaxDuration(seconds=0.001))
+    result.evaluate(CustomEvaluator())
 
 
 @dataset(
